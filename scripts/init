@@ -1,0 +1,72 @@
+#!/usr/bin/env python
+from builtins import input
+import io
+import os
+from random import choice
+from string import ascii_lowercase
+import sys
+
+SCRIPT_DIR = os.path.realpath(os.path.join(__file__, '..'))
+ROOT_DIR = os.path.realpath(os.path.join(SCRIPT_DIR, '..'))
+
+
+def main(arguments):
+  os.chdir(ROOT_DIR)
+  configure_zappa_settings()
+  init_venv()
+  show_commands_cheatsheet()
+
+
+def configure_zappa_settings():
+  if not os.path.exists('zappa_settings.json'):
+    bot_name = input("Bot name (value generate by default: bot-xxxxx):")
+    if bot_name == '':
+      bot_name="bot-" + ''.join(choice(ascii_lowercase) for i in range(5))
+
+    slack_token = input("Verification Token (XXXnanxxxxxZKGhCS4xxxxxx) on https://api.slack.com/apps/XXXXXXXXXX : ")
+    team_id = input("Team Id (TXXXCXXX0) on https://stackoverflow.com/a/44883343 : ")
+    s3_bucket = "zappa-" + ''.join(choice(ascii_lowercase) for i in range(15))
+
+    with io.open('zappa_settings.json.tpl') as fp:
+      configuration_template = fp.read()
+
+    configuration = configuration_template\
+      .replace('{SLACK_TOKEN}', slack_token)\
+      .replace('{SLACK_TEAM_ID}', team_id)\
+      .replace('{S3_BUCKET}', s3_bucket)\
+      .replace('{BOT_NAME}', bot_name)
+    with io.open('zappa_settings.json', 'w') as fp:
+      fp.write(configuration)
+
+def init_venv():
+    if not os.path.exists('venv'):
+        _system('virtualenv venv -p python3')
+
+    _system('. venv/bin/activate; pip install .')
+
+
+def show_commands_cheatsheet():
+    print('')
+    print('`source venv/bin/activate` to activate the python virtual environment')
+    print('`zappa deploy dev` to deploy the lambda the first time')
+    print('`zappa update dev` to deploy the lambda')
+    print('`zappa undeploy dev` to remove the lambda')
+
+# BOILERPLATE TO REPRODUCE -ex behavior of bash
+
+def _system(cmd, logged = True):
+  if logged:
+    print('$ {0}'.format(cmd))
+
+  output = os.system(cmd)
+
+  # see : https://stackoverflow.com/a/6466753
+  error_code = output >> 8
+  if error_code > 0:
+    raise OSError(error_code)
+
+if __name__ == '__main__':
+  try:
+    main(sys.argv[1:])
+  except (OSError) as e:
+    sys.exit(e.args[0])
